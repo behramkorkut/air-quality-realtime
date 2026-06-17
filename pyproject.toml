@@ -11,12 +11,15 @@ dependencies = [
     "pydantic-settings>=2.3", # config via variables d'environnement (.env)
     "structlog>=24.1",        # logs structurés et lisibles
     "httpx>=0.27",            # client HTTP (appel de l'API Open-Meteo)
+    "duckdb>=1.0",            # entrepôt analytique local (stand-in de Snowflake)
+    "pytz>=2024.1",           # requis par DuckDB pour relire les colonnes TIMESTAMPTZ
 ]
 
 [project.scripts]
 # Points d'entrée en ligne de commande (remplis au fil des étapes)
 aq-producer = "air_quality_realtime.producer.main:main"
 aq-processor = "air_quality_realtime.processor.main:main"
+aq-sink = "air_quality_realtime.sink.main:main"
 
 [dependency-groups]
 # Outils de dev, installés avec `uv sync --group dev`

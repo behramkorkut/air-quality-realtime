@@ -33,6 +33,12 @@ class Settings(BaseSettings):
     processor_group_id: str = "air-quality-processor"  # consumer group Kafka
     processor_window_size: int = 5  # nb de relevés pour la moyenne glissante
 
+    # --- Sink (DuckDB local) ---
+    sink_group_id: str = "air-quality-sink"
+    duckdb_path: str = "data/air_quality.duckdb"
+    sink_batch_size: int = 50  # taille max d'un micro-lot avant écriture
+    sink_flush_seconds: float = 5.0  # écriture forcée toutes les N secondes
+
     # --- Snowflake (rempli à l'étape sink) ---
     snowflake_account: str = ""
     snowflake_user: str = ""

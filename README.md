@@ -17,11 +17,11 @@ de flux, entrepôt cloud et visualisation, le tout conteneurisé.
 └──────────────┘                    └──────┬────────┘
                                             │
  CHEMIN BATCH (orchestré)                   ▼
-┌──────────────┐   horaire          ┌─────────────┐
-│   Airflow    │ ─────────────────► │  Snowflake  │  (entrepôt analytique cloud)
-│  DAG horaire │  Open-Meteo réel   │             │
-│ + qualité    │  -> chargement     └─────────────┘
-└──────────────┘
+┌──────────────┐   horaire          ┌──────────────────────┐
+│   Airflow    │ ─────────────────► │  DuckDB (local)      │  entrepôt OLAP
+│  DAG horaire │  Open-Meteo réel   │  -> Snowflake (prod, │  (cf. docs/
+│ + qualité    │  -> chargement     │     documenté)       │   snowflake-deployment.md)
+└──────────────┘                    └──────────────────────┘
 ```
 
 Deux chemins complémentaires : un **flux temps réel** (capteurs simulés haute
@@ -39,7 +39,7 @@ contrôles qualité). La source de données est interchangeable
 | Source réelle     | API Open-Meteo (httpx)          | Vraies concentrations (gratuit, sans clé)   |
 | Orchestration     | Apache Airflow                  | DAG batch : ingestion horaire + qualité     |
 | Traitement        | Python                          | Stats glissantes, détection de seuils       |
-| Entrepôt          | Snowflake                       | Stockage analytique cloud                   |
+| Entrepôt          | DuckDB (local) / Snowflake      | Stockage analytique colonnaire (OLAP)       |
 | Visualisation     | Streamlit                       | Tableau de bord live                        |
 | Config / qualité  | pydantic-settings, ruff, pytest | Config typée, lint, tests                   |
 | Conteneurisation  | Docker / docker-compose         | Reproductibilité, déploiement               |
@@ -82,6 +82,12 @@ uv run aq-producer
 
 # 3 bis. Dans un AUTRE terminal : lancer le processor (détecte et alerte)
 uv run aq-processor
+
+# 3 ter. Dans un AUTRE terminal : lancer le sink (persiste dans DuckDB)
+uv run aq-sink
+
+# Vérifier le contenu de l'entrepôt (arrêter le sink d'abord) :
+uv run python scripts/query_duckdb.py
 
 # 4. Vérifier les messages :
 #    - via la console web : http://localhost:8080  (onglet Topics)
