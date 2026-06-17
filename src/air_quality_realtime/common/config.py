@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     producer_interval_seconds: float = 2.0
     producer_n_stations: int = 5
 
+    # --- Processor ---
+    processor_group_id: str = "air-quality-processor"  # consumer group Kafka
+    processor_window_size: int = 5  # nb de relevés pour la moyenne glissante
+
     # --- Snowflake (rempli à l'étape sink) ---
     snowflake_account: str = ""
     snowflake_user: str = ""

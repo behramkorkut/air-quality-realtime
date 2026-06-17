@@ -55,3 +55,16 @@ class SensorReading(BaseModel):
             Pollutant.NO2: self.no2,
             Pollutant.O3: self.o3,
         }
+
+
+class Alert(BaseModel):
+    """Alerte émise quand la moyenne glissante d'un polluant dépasse son seuil."""
+
+    station_id: str
+    city: str
+    pollutant: Pollutant
+    average: float  # moyenne glissante ayant déclenché l'alerte (µg/m³)
+    threshold: float  # seuil OMS dépassé (µg/m³)
+    window_size: int  # nombre de relevés dans la fenêtre
+    exceedance_ratio: float  # average / threshold (indicateur de sévérité)
+    timestamp: datetime  # horodatage du relevé déclencheur

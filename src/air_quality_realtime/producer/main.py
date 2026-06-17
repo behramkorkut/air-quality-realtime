@@ -11,7 +11,7 @@ import time
 import structlog
 
 from air_quality_realtime.common.config import settings
-from air_quality_realtime.producer.publisher import KafkaPublisher
+from air_quality_realtime.common.kafka import JsonProducer
 from air_quality_realtime.producer.sensors import build_stations
 from air_quality_realtime.producer.sources import build_source
 
@@ -21,7 +21,7 @@ log = structlog.get_logger()
 def main() -> None:
     stations = build_stations(settings.producer_n_stations)
     source = build_source(settings.source, stations)
-    publisher = KafkaPublisher(settings.kafka_bootstrap_servers, settings.topic_raw)
+    producer = JsonProducer(settings.kafka_bootstrap_servers, client_id="aq-producer")
 
     log.info(
         "producer.start",
@@ -36,7 +36,7 @@ def main() -> None:
     try:
         while True:
             for reading in source.fetch():
-                publisher.publish(reading)
+                producer.publish(settings.topic_raw, reading.station_id, reading)
                 sent += 1
             log.info("producer.batch_sent", total=sent)
             time.sleep(settings.producer_interval_seconds)
@@ -44,7 +44,7 @@ def main() -> None:
         log.info("producer.stop", total=sent)
     finally:
         # On s'assure que les derniers messages partent bien avant de quitter.
-        publisher.flush()
+        producer.flush()
 
 
 if __name__ == "__main__":

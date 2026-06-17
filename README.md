@@ -80,6 +80,9 @@ bash scripts/create_topics.sh
 # 3. Lancer le producer (publie sur le topic air-quality-raw)
 uv run aq-producer
 
+# 3 bis. Dans un AUTRE terminal : lancer le processor (détecte et alerte)
+uv run aq-processor
+
 # 4. Vérifier les messages :
 #    - via la console web : http://localhost:8080  (onglet Topics)
 #    - ou en CLI :

@@ -16,6 +16,7 @@ dependencies = [
 [project.scripts]
 # Points d'entrée en ligne de commande (remplis au fil des étapes)
 aq-producer = "air_quality_realtime.producer.main:main"
+aq-processor = "air_quality_realtime.processor.main:main"
 
 [dependency-groups]
 # Outils de dev, installés avec `uv sync --group dev`
