@@ -1,0 +1,39 @@
+[project]
+name = "air-quality-realtime"
+version = "0.1.0"
+description = "Pipeline temps réel de surveillance de la qualité de l'air (Redpanda/Kafka -> détection d'alertes -> Snowflake -> dashboard)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # --- Étape 1 : socle commun + producer ---
+    "confluent-kafka>=2.5",   # client Kafka/Redpanda (basé sur librdkafka, standard industrie)
+    "pydantic>=2.7",          # validation/typage des messages capteurs
+    "pydantic-settings>=2.3", # config via variables d'environnement (.env)
+    "structlog>=24.1",        # logs structurés et lisibles
+    "httpx>=0.27",            # client HTTP (appel de l'API Open-Meteo)
+]
+
+[project.scripts]
+# Points d'entrée en ligne de commande (remplis au fil des étapes)
+aq-producer = "air_quality_realtime.producer.main:main"
+
+[dependency-groups]
+# Outils de dev, installés avec `uv sync --group dev`
+dev = [
+    "ruff>=0.5",      # linter + formatter
+    "pytest>=8.2",    # tests
+]
+
+[build-system]
+requires = ["uv_build>=0.11.19,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]  # erreurs, pyflakes, imports, pyupgrade, bugbear
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

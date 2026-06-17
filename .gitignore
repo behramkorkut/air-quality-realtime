@@ -1,0 +1,24 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets et config locale
+.env
+
+# Données locales générées
+data/*
+!data/.gitkeep
+
+# Cache outils
+.ruff_cache/
+.pytest_cache/
+
+# dossier docs 
+docs/*

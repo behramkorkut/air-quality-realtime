@@ -1,0 +1,110 @@
+# Air Quality Realtime — Pipeline de données temps réel
+
+Surveillance en quasi temps réel de la qualité de l'air urbain : détection et
+alerte sur les dépassements de seuils OMS à partir d'un flux continu de capteurs.
+
+Projet portfolio orienté **data engineering temps réel** : streaming, traitement
+de flux, entrepôt cloud et visualisation, le tout conteneurisé.
+
+## Architecture (hybride : streaming + batch)
+
+```
+ CHEMIN STREAMING (temps réel)
+┌──────────────┐  air-quality-raw   ┌───────────────┐  air-quality-alerts  ┌─────────────┐
+│   Producer   │ ─────────────────► │   Processor   │ ───────────────────► │  Dashboard  │
+│ SimulatedSrc │     (Redpanda)     │ (détection    │      (Redpanda)      │ (Streamlit) │
+│ haute fréq.  │                    │  d'alertes)   │                      └─────────────┘
+└──────────────┘                    └──────┬────────┘
+                                            │
+ CHEMIN BATCH (orchestré)                   ▼
+┌──────────────┐   horaire          ┌─────────────┐
+│   Airflow    │ ─────────────────► │  Snowflake  │  (entrepôt analytique cloud)
+│  DAG horaire │  Open-Meteo réel   │             │
+│ + qualité    │  -> chargement     └─────────────┘
+└──────────────┘
+```
+
+Deux chemins complémentaires : un **flux temps réel** (capteurs simulés haute
+fréquence -> détection d'alertes -> dashboard) et un **chemin batch orchestré
+par Airflow** (ingestion horaire des vraies données Open-Meteo -> Snowflake +
+contrôles qualité). La source de données est interchangeable
+(`SimulatedSource` / `OpenMeteoSource`) via une abstraction commune.
+
+## Stack technique
+
+| Brique            | Techno                          | Rôle                                        |
+|-------------------|---------------------------------|---------------------------------------------|
+| Bus de messages   | Redpanda (compatible Kafka)     | Transport des flux temps réel               |
+| Client streaming  | confluent-kafka (Python)        | Produire / consommer les messages           |
+| Source réelle     | API Open-Meteo (httpx)          | Vraies concentrations (gratuit, sans clé)   |
+| Orchestration     | Apache Airflow                  | DAG batch : ingestion horaire + qualité     |
+| Traitement        | Python                          | Stats glissantes, détection de seuils       |
+| Entrepôt          | Snowflake                       | Stockage analytique cloud                   |
+| Visualisation     | Streamlit                       | Tableau de bord live                        |
+| Config / qualité  | pydantic-settings, ruff, pytest | Config typée, lint, tests                   |
+| Conteneurisation  | Docker / docker-compose         | Reproductibilité, déploiement               |
+| Gestion de projet | uv                              | Environnement et dépendances                |
+
+## Prérequis
+
+- [uv](https://docs.astral.sh/uv/) (gestion d'environnement Python)
+- Docker + docker-compose (pour Redpanda et le déploiement)
+
+## Démarrage rapide
+
+```bash
+# 1. Installer l'environnement (crée .venv et installe les dépendances)
+uv sync
+
+# 2. Outils de dev (lint + tests)
+uv sync --group dev
+
+# 3. Copier la config d'exemple
+cp .env.example .env
+```
+
+### Lancer Redpanda et le producer
+
+> Selon ta version de Docker, la commande est `docker compose` (V2) ou
+> `docker-compose` (V1, avec tiret). Les exemples ci-dessous utilisent la V2 ;
+> remplace par `docker-compose` si besoin. Le script `create_topics.sh` détecte
+> automatiquement la bonne commande.
+
+```bash
+# 1. Démarrer le broker Redpanda + la console web
+docker compose -f docker/docker-compose.yml up -d
+
+# 2. Créer les topics (une seule fois)
+bash scripts/create_topics.sh
+
+# 3. Lancer le producer (publie sur le topic air-quality-raw)
+uv run aq-producer
+
+# 4. Vérifier les messages :
+#    - via la console web : http://localhost:8080  (onglet Topics)
+#    - ou en CLI :
+docker compose -f docker/docker-compose.yml exec redpanda-0 \
+  rpk topic consume air-quality-raw -n 5
+
+# Arrêt (et suppression des données) :
+docker compose -f docker/docker-compose.yml down -v
+```
+
+Les étapes suivantes (processor, sink Snowflake, dashboard, DAG Airflow)
+sont ajoutées progressivement — voir le journal de bord.
+
+## Structure du projet
+
+```
+air-quality-realtime/
+├── src/air_quality_realtime/
+│   ├── common/      # config et utilitaires partagés
+│   ├── producer/    # simulateur de capteurs -> Redpanda
+│   ├── processor/   # détection d'alertes sur le flux
+│   └── sink/        # chargement vers Snowflake
+├── docker/          # Dockerfiles + docker-compose
+├── scripts/         # scripts utilitaires (création de topics, etc.)
+├── tests/           # tests unitaires
+├── data/            # données locales (non versionnées)
+└── pyproject.toml   # dépendances gérées par uv
+```
