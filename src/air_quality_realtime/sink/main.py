@@ -44,8 +44,7 @@ def main() -> None:
 
     def flush() -> None:
         nonlocal total_r, total_a, last_flush
-        n_r = sink.write_readings(readings)
-        n_a = sink.write_alerts(alerts)
+        n_r, n_a = sink.write(readings, alerts)
         if n_r or n_a:
             total_r += n_r
             total_a += n_a

@@ -86,8 +86,12 @@ uv run aq-processor
 # 3 ter. Dans un AUTRE terminal : lancer le sink (persiste dans DuckDB)
 uv run aq-sink
 
-# Vérifier le contenu de l'entrepôt (arrêter le sink d'abord) :
+# Vérifier le contenu de l'entrepôt :
 uv run python scripts/query_duckdb.py
+
+# 3 quater. Le dashboard temps réel (lecture seule, auto-refresh 5 s)
+uv run streamlit run src/air_quality_realtime/dashboard/app.py
+# -> http://localhost:8501
 
 # 4. Vérifier les messages :
 #    - via la console web : http://localhost:8080  (onglet Topics)

@@ -1,6 +1,8 @@
-"""Tests du sink DuckDB (avec une base en mémoire, sans Kafka ni fichier)."""
+"""Tests du sink DuckDB (sur un fichier temporaire, sans Kafka)."""
 
 from datetime import datetime, timezone
+
+import duckdb
 
 from air_quality_realtime.common.models import Alert, Pollutant, SensorReading
 from air_quality_realtime.sink.duckdb_sink import DuckDBSink
@@ -33,26 +35,30 @@ def _alert() -> Alert:
     )
 
 
-def test_schema_cree_et_insertion_readings():
-    sink = DuckDBSink(":memory:")
-    assert sink.write_readings([_reading(), _reading()]) == 2
-    count = sink._con.execute("SELECT count(*) FROM readings").fetchone()[0]
-    assert count == 2
-    sink.close()
+def test_write_persiste_readings_et_alerts(tmp_path):
+    db = str(tmp_path / "test.duckdb")
+    sink = DuckDBSink(db)
+    n_r, n_a = sink.write([_reading(), _reading()], [_alert()])
+    assert (n_r, n_a) == (2, 1)
+
+    # Relecture via une connexion read-only indépendante (comme le dashboard).
+    con = duckdb.connect(db, read_only=True)
+    assert con.execute("SELECT count(*) FROM readings").fetchone()[0] == 2
+    assert con.execute("SELECT count(*) FROM alerts").fetchone()[0] == 1
+    assert con.execute("SELECT pollutant FROM alerts").fetchone()[0] == "no2"
+    con.close()
 
 
-def test_insertion_alerts():
-    sink = DuckDBSink(":memory:")
-    assert sink.write_alerts([_alert()]) == 1
-    row = sink._con.execute(
-        "SELECT pollutant, exceedance_ratio FROM alerts"
-    ).fetchone()
-    assert row == ("no2", 1.2)
-    sink.close()
+def test_write_lot_vide_ninsere_rien(tmp_path):
+    sink = DuckDBSink(str(tmp_path / "test.duckdb"))
+    assert sink.write([], []) == (0, 0)
 
 
-def test_lot_vide_ninsere_rien():
-    sink = DuckDBSink(":memory:")
-    assert sink.write_readings([]) == 0
-    assert sink.write_alerts([]) == 0
-    sink.close()
+def test_schema_cree_meme_sans_ecriture(tmp_path):
+    # Le schéma doit exister dès l'init, même avant toute écriture.
+    db = str(tmp_path / "test.duckdb")
+    DuckDBSink(db)
+    con = duckdb.connect(db, read_only=True)
+    tables = {r[0] for r in con.execute("SHOW TABLES").fetchall()}
+    assert {"readings", "alerts"} <= tables
+    con.close()
