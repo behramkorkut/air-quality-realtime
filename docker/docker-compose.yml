@@ -1,11 +1,25 @@
 name: air-quality-realtime
 
+# Template commun aux 4 services applicatifs (DRY via ancre YAML).
+# Ils partagent la même image. IMPORTANT : un SEUL service porte le `build`
+# (le producer) pour éviter que 4 builds parallèles ne se télescopent à
+# l'export du même tag. Les autres réutilisent l'image déjà construite.
+x-app: &app
+  image: air-quality-realtime:latest
+  networks:
+    - redpanda_network
+  depends_on:
+    redpanda-0:
+      condition: service_healthy   # on attend que le broker soit vraiment prêt
+  restart: unless-stopped
+
 networks:
   redpanda_network:
     driver: bridge
 
 volumes:
   redpanda-0: null
+  duckdb-data: null   # fichier DuckDB partagé entre le sink (écrit) et le dashboard (lit)
 
 services:
   # --- Broker Redpanda (compatible Kafka) ---------------------------------
@@ -68,3 +82,50 @@ services:
     depends_on:
       redpanda-0:
         condition: service_healthy
+
+  # --- Producer : émet les relevés vers Redpanda --------------------------
+  # Seul service à porter le `build` : il construit l'image partagée.
+  producer:
+    <<: *app
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: aq-producer
+    command: aq-producer
+    environment:
+      # IMPORTANT : depuis le réseau Docker on vise le listener INTERNAL.
+      KAFKA_BOOTSTRAP_SERVERS: redpanda-0:9092
+      SOURCE: simulated
+
+  # --- Processor : détecte les dépassements de seuils ---------------------
+  processor:
+    <<: *app
+    container_name: aq-processor
+    command: aq-processor
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: redpanda-0:9092
+
+  # --- Sink : persiste relevés et alertes dans DuckDB ---------------------
+  sink:
+    <<: *app
+    container_name: aq-sink
+    command: aq-sink
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: redpanda-0:9092
+      DUCKDB_PATH: data/air_quality.duckdb
+    volumes:
+      - duckdb-data:/app/data
+
+  # --- Dashboard : visualisation temps réel (lit DuckDB) ------------------
+  dashboard:
+    <<: *app
+    container_name: aq-dashboard
+    command: >
+      streamlit run src/air_quality_realtime/dashboard/app.py
+      --server.address=0.0.0.0 --server.port=8501 --server.headless=true
+    environment:
+      DUCKDB_PATH: data/air_quality.duckdb
+    volumes:
+      - duckdb-data:/app/data   # même volume que le sink (lecture seule côté app)
+    ports:
+      - "8501:8501"             # http://localhost:8501

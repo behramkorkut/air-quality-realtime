@@ -103,8 +103,37 @@ docker compose -f docker/docker-compose.yml exec redpanda-0 \
 docker compose -f docker/docker-compose.yml down -v
 ```
 
-Les étapes suivantes (processor, sink Snowflake, dashboard, DAG Airflow)
-sont ajoutées progressivement — voir le journal de bord.
+### Tout lancer en conteneurs (une seule commande)
+
+Toute la stack (Redpanda + console + producer + processor + sink + dashboard)
+peut démarrer ensemble. Les services applicatifs partagent une image unique
+(`docker/Dockerfile`) et se connectent au broker via le listener **interne**
+`redpanda-0:9092`.
+
+```bash
+# Construire les images et tout démarrer
+docker compose -f docker/docker-compose.yml up -d --build
+
+# (Première fois / volume vierge uniquement) créer les topics partitionnés :
+bash scripts/create_topics.sh
+
+# Accès :
+#   - Dashboard        : http://localhost:8501
+#   - Console Redpanda : http://localhost:8080
+
+# Suivre les logs d'un service
+docker compose -f docker/docker-compose.yml logs -f processor
+
+# Tout arrêter (garde les données) / tout supprimer (-v efface les volumes)
+docker compose -f docker/docker-compose.yml down
+docker compose -f docker/docker-compose.yml down -v
+```
+
+> Mode développement (hot reload, itération rapide) : on garde Redpanda en
+> conteneur et on lance producer/processor/sink/dashboard via `uv run` sur
+> l'hôte (voir plus haut). Mode démo/portfolio : tout en conteneurs.
+
+L'étape suivante (DAG Airflow) est documentée dans le journal de bord.
 
 ## Structure du projet
 

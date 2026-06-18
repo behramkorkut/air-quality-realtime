@@ -78,7 +78,11 @@ def live_view() -> None:
 def trend_view() -> None:
     """Évolution des polluants pour une station (sélecteur)."""
     st.subheader("Évolution des polluants par station")
-    stations = queries.get_station_ids(DB_PATH)
+    try:
+        stations = queries.get_station_ids(DB_PATH)
+    except Exception as exc:  # noqa: BLE001
+        st.info(f"En attente de l'entrepôt… ({exc})")
+        return
     if not stations:
         st.info("En attente de données.")
         return

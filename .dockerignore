@@ -1,0 +1,16 @@
+# Environnements et caches (recréés dans l'image)
+.venv/
+__pycache__/
+*.py[oc]
+.ruff_cache/
+.pytest_cache/
+
+# Données locales et secrets
+data/
+*.duckdb
+.env
+
+# Versioning
+.git/
+.gitignore
+# NB : on n'exclut PAS README.md (requis par le build du paquet : readme = "README.md")
