@@ -1,0 +1,8 @@
+# Copie ce fichier en "terraform.tfvars" et renseigne tes valeurs.
+# terraform.tfvars est ignoré par Git (voir .gitignore).
+
+alert_email = "ton.adresse@example.com"
+
+# Optionnel (des valeurs par défaut existent déjà) :
+# aws_region   = "eu-west-3"
+# project_name = "air-quality-realtime"

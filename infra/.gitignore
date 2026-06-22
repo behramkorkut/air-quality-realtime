@@ -1,0 +1,25 @@
+# --- Terraform ---
+# Répertoire des providers téléchargés (lourd, régénéré par `terraform init`)
+.terraform/
+.terraform.lock.hcl
+
+# State : NE JAMAIS committer. Peut contenir des secrets en clair.
+*.tfstate
+*.tfstate.*
+terraform.tfstate.d/
+
+# Fichiers de variables (peuvent contenir des valeurs sensibles)
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# Plans sauvegardés
+*.tfplan
+
+# Artefacts de build des Lambdas (zips générés)
+builds/
+*.zip
+
+# Sorties de test des commandes aws lambda invoke
+response.json
+*_response.json
